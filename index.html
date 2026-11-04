@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>张皓源 · Personal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1a2332;
+      --muted: #5a6a7e;
+      --surface: rgba(255, 255, 255, 0.72);
+      --accent: #0d9488;
+      --accent-deep: #0f766e;
+      --glow: rgba(13, 148, 136, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Outfit", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 20%, rgba(45, 212, 191, 0.35), transparent 55%),
+        radial-gradient(ellipse 70% 50% at 90% 80%, rgba(14, 165, 233, 0.28), transparent 50%),
+        linear-gradient(160deg, #e8f4f2 0%, #f0f7fb 45%, #eef2f7 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      overflow-x: hidden;
+    }
+
+    .page {
+      width: min(36rem, 100%);
+      text-align: center;
+      animation: rise 0.9s ease-out both;
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(1.25rem);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .brand {
+      font-family: "Fraunces", serif;
+      font-size: clamp(2.75rem, 8vw, 3.75rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(120deg, #134e4a 0%, #0d9488 55%, #0369a1 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: rise 0.9s ease-out 0.1s both;
+    }
+
+    .intro {
+      font-size: 1.125rem;
+      line-height: 1.7;
+      color: var(--muted);
+      margin-bottom: 2rem;
+      max-width: 28rem;
+      margin-inline: auto;
+      animation: rise 0.9s ease-out 0.22s both;
+    }
+
+    .cta {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      padding: 0.9rem 1.75rem;
+      border-radius: 999px;
+      box-shadow: 0 10px 28px var(--glow);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+      animation: rise 0.9s ease-out 0.34s both;
+    }
+
+    .cta:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+      box-shadow: 0 14px 32px rgba(13, 148, 136, 0.35);
+    }
+
+    .cta:active {
+      transform: translateY(0);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(6px);
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      padding: 1.5rem;
+      z-index: 10;
+    }
+
+    .overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      background: var(--surface);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 1.25rem;
+      padding: 2rem 2.25rem;
+      width: min(22rem, 100%);
+      text-align: center;
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+      transform: scale(0.92) translateY(12px);
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .overlay.open .modal {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal p {
+      font-family: "Fraunces", serif;
+      font-size: 1.65rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 1.35rem;
+    }
+
+    .modal button {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--accent-deep);
+      background: rgba(13, 148, 136, 0.12);
+      padding: 0.65rem 1.35rem;
+      border-radius: 999px;
+      transition: background 0.2s ease;
+    }
+
+    .modal button:hover {
+      background: rgba(13, 148, 136, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1 class="brand">张皓源</h1>
+    <p class="intro">
+      陵川三中学子。前端爱好者，喜欢用代码把想法变成好看的页面。最近在探索 vibecoding，边写边玩，把灵感快速落地。
+    </p>
+    <button class="cta" type="button" id="helloBtn">Say Hello</button>
+  </main>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="helloMsg" hidden>
+    <div class="modal">
+      <p id="helloMsg">Hello vibecoding</p>
+      <button type="button" id="closeBtn">关闭</button>
+    </div>
+  </div>
+
+  <script>
+    const overlay = document.getElementById("overlay");
+    const openBtn = document.getElementById("helloBtn");
+    const closeBtn = document.getElementById("closeBtn");
+
+    function openModal() {
+      overlay.hidden = false;
+      requestAnimationFrame(() => overlay.classList.add("open"));
+    }
+
+    function closeModal() {
+      overlay.classList.remove("open");
+      overlay.addEventListener(
+        "transitionend",
+        () => {
+          if (!overlay.classList.contains("open")) overlay.hidden = true;
+        },
+        { once: true }
+      );
+    }
+
+    openBtn.addEventListener("click", openModal);
+    closeBtn.addEventListener("click", closeModal);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && overlay.classList.contains("open")) closeModal();
+    });
+  </script>
+</body>
+</html>
