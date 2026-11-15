@@ -39,8 +39,17 @@
     }
 
     .page {
-      width: min(36rem, 100%);
-      text-align: center;
+      width: min(74rem, 100%);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(250px, 32vw, 380px);
+      grid-template-areas:
+        "brand figure"
+        "intro figure"
+        "cta figure";
+      align-items: center;
+      column-gap: clamp(2rem, 5vw, 4.5rem);
+      row-gap: 1.5rem;
+      text-align: left;
       animation: rise 0.9s ease-out both;
     }
 
@@ -56,12 +65,12 @@
     }
 
     .brand {
+      grid-area: brand;
       font-family: "Fraunces", serif;
       font-size: clamp(2.75rem, 8vw, 3.75rem);
       font-weight: 700;
       letter-spacing: -0.03em;
       line-height: 1.1;
-      margin-bottom: 1.25rem;
       background: linear-gradient(120deg, #134e4a 0%, #0d9488 55%, #0369a1 100%);
       -webkit-background-clip: text;
       background-clip: text;
@@ -70,16 +79,17 @@
     }
 
     .intro {
+      grid-area: intro;
       font-size: 1.125rem;
       line-height: 1.7;
       color: var(--muted);
-      margin-bottom: 2rem;
       max-width: 28rem;
-      margin-inline: auto;
       animation: rise 0.9s ease-out 0.22s both;
     }
 
     .cta {
+      grid-area: cta;
+      justify-self: start;
       appearance: none;
       border: none;
       cursor: pointer;
@@ -104,6 +114,85 @@
 
     .cta:active {
       transform: translateY(0);
+    }
+
+    .hero-figure {
+      grid-area: figure;
+      position: relative;
+      width: 100%;
+      max-width: 380px;
+      aspect-ratio: 1 / 1;
+      justify-self: center;
+      opacity: 0;
+      animation: figureIn 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+    }
+
+    .hero-figure::before {
+      content: "";
+      position: absolute;
+      inset: 8%;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle at 50% 45%,
+        rgba(45, 212, 191, 0.22),
+        rgba(14, 165, 233, 0.12) 55%,
+        transparent 74%
+      );
+      filter: blur(6px);
+      z-index: -1;
+    }
+
+    .hero-figure::after {
+      content: "拖拽旋转 · 抓住身体部位拉伸";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1.7rem;
+      font-size: 0.78rem;
+      line-height: 1;
+      color: var(--muted);
+      text-align: center;
+      opacity: 0.75;
+      pointer-events: none;
+    }
+
+    .hero-figure canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .hero-figure canvas.dragging {
+      cursor: grabbing;
+    }
+
+    .hero-figure.figure-fallback {
+      display: grid;
+      place-items: center;
+      animation: none;
+      opacity: 1;
+    }
+
+    .figure-fallback-text {
+      font-size: 0.95rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 1rem;
+    }
+
+    @keyframes figureIn {
+      from {
+        opacity: 0;
+        transform: translateY(1.5rem) scale(0.92);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
 
     .overlay {
@@ -167,11 +256,40 @@
     .modal button:hover {
       background: rgba(13, 148, 136, 0.2);
     }
+
+    @media (max-width: 860px) {
+      .page {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+          "brand"
+          "figure"
+          "intro"
+          "cta";
+        text-align: center;
+        justify-items: center;
+        row-gap: 2rem;
+      }
+
+      .intro {
+        margin-inline: auto;
+      }
+
+      .cta {
+        justify-self: center;
+      }
+
+      .hero-figure {
+        width: min(76vw, 300px);
+      }
+    }
   </style>
 </head>
 <body>
   <main class="page">
     <h1 class="brand">张皓源</h1>
+    <figure class="hero-figure" id="heroFigure" aria-hidden="true">
+      <canvas id="scene"></canvas>
+    </figure>
     <p class="intro">
       陵川三中学子。前端爱好者，喜欢用代码把想法变成好看的页面。最近在探索 vibecoding，边写边玩，把灵感快速落地。
     </p>
@@ -214,6 +332,593 @@
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && overlay.classList.contains("open")) closeModal();
     });
+  </script>
+
+  <script>
+    (function () {
+      const figure = document.getElementById("heroFigure");
+      const canvas = document.getElementById("scene");
+      if (!figure || !canvas) return;
+
+      const CDNS = [
+        "https://registry.npmmirror.com/three/0.149.0/files/build/three.min.js",
+        "https://unpkg.com/three@0.149.0/build/three.min.js",
+        "https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"
+      ];
+
+      let index = 0;
+
+      function tryNext() {
+        if (window.THREE) {
+          initScene(window.THREE, canvas, figure);
+          return;
+        }
+        if (index >= CDNS.length) {
+          showFallback();
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = CDNS[index++];
+        script.async = false;
+        script.onload = () => {
+          if (window.THREE) {
+            initScene(window.THREE, canvas, figure);
+          } else {
+            tryNext();
+          }
+        };
+        script.onerror = () => tryNext();
+        document.head.appendChild(script);
+      }
+
+      function showFallback() {
+        figure.classList.add("figure-fallback");
+        const p = document.createElement("p");
+        p.className = "figure-fallback-text";
+        p.textContent = "3D 角色加载失败，请检查网络后刷新";
+        figure.appendChild(p);
+      }
+
+      tryNext();
+    })();
+
+    function initScene(THREE, canvas, figure) {
+      let renderer;
+      try {
+        renderer = new THREE.WebGLRenderer({
+          canvas,
+          alpha: true,
+          antialias: true,
+          powerPreference: "high-performance"
+        });
+      } catch (err) {
+        figure.style.display = "none";
+        return;
+      }
+
+      renderer.setClearColor(0x000000, 0);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.outputEncoding = THREE.sRGBEncoding;
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+      camera.position.set(0, 0.02, 7.1);
+      camera.lookAt(0, 0, 0);
+
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x0d9488, 1.15));
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.65);
+      keyLight.position.set(3, 4, 5);
+      scene.add(keyLight);
+
+      const rimLight = new THREE.DirectionalLight(0x99f6e4, 1.45);
+      rimLight.position.set(-4, 2, -4);
+      scene.add(rimLight);
+
+      const fillLight = new THREE.DirectionalLight(0xbfdbfe, 0.75);
+      fillLight.position.set(-2, -2, 3);
+      scene.add(fillLight);
+
+      const floatGroup = new THREE.Group();
+      const tiltGroup = new THREE.Group();
+      const spinGroup = new THREE.Group();
+      floatGroup.add(tiltGroup);
+      tiltGroup.add(spinGroup);
+      scene.add(floatGroup);
+
+      function bodyMaterial(opts) {
+        return new THREE.MeshStandardMaterial(
+          Object.assign(
+            {
+              roughness: 0.5,
+              metalness: 0.05
+            },
+            opts || {}
+          )
+        );
+      }
+
+      function shirtMaterial() {
+        return new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          roughness: 0.38,
+          metalness: 0.05
+        });
+      }
+
+      const SKIN = 0xf2c3a1;
+      const DARK = 0x16303b;
+      const PANTS = 0x26476d;
+      const SHOE = 0x1a2332;
+
+      // 头部与五官
+      const headMat = bodyMaterial({ color: SKIN });
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 28, 20), headMat);
+
+      const darkMat = bodyMaterial({ color: DARK });
+      const noseMat = bodyMaterial({ color: 0xdfa47e });
+
+      const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 10), darkMat);
+      eyeL.position.set(-0.2, 0.06, 0.44);
+      const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 10), darkMat);
+      eyeR.position.set(0.2, 0.06, 0.44);
+
+      const browL = new THREE.Mesh(new THREE.CapsuleGeometry(0.024, 0.13, 3, 8), darkMat);
+      browL.position.set(-0.2, 0.2, 0.41);
+      browL.rotation.z = Math.PI / 2;
+      const browR = new THREE.Mesh(new THREE.CapsuleGeometry(0.024, 0.13, 3, 8), darkMat);
+      browR.position.set(0.2, 0.2, 0.41);
+      browR.rotation.z = Math.PI / 2;
+
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 10), noseMat);
+      nose.position.set(0, -0.03, 0.48);
+
+      const smile = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.024, 6, 18, Math.PI), darkMat);
+      smile.position.set(0, -0.2, 0.43);
+      smile.rotation.z = Math.PI;
+
+      const oMouth = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.028, 6, 14), darkMat);
+      oMouth.position.set(0, -0.2, 0.43);
+      oMouth.visible = false;
+
+      const earL = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), headMat);
+      earL.position.set(-0.47, 0.02, 0);
+      earL.scale.z = 0.55;
+      const earR = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), headMat);
+      earR.position.set(0.47, 0.02, 0);
+      earR.scale.z = 0.55;
+
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 2.02, 0);
+      headGroup.add(head, eyeL, eyeR, browL, browR, nose, smile, oMouth, earL, earR);
+
+      // 脖子
+      const neckMat = bodyMaterial({ color: SKIN });
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.15, 0.24, 14), neckMat);
+      neck.position.set(0, 1.43, 0);
+
+      // 躯干：衣服（青绿→蓝渐变，人体轮廓）
+      const torsoMat = shirtMaterial();
+      const torsoPoints = [
+        new THREE.Vector2(0.0, -0.78),
+        new THREE.Vector2(0.42, -0.72),
+        new THREE.Vector2(0.5, -0.55),
+        new THREE.Vector2(0.44, -0.12),
+        new THREE.Vector2(0.55, 0.38),
+        new THREE.Vector2(0.52, 0.95),
+        new THREE.Vector2(0.36, 1.25),
+        new THREE.Vector2(0.0, 1.32)
+      ];
+      const torso = new THREE.Mesh(new THREE.LatheGeometry(torsoPoints, 24), torsoMat);
+
+      // 左臂：短袖 + 前臂 + 手
+      const armUpperLMat = shirtMaterial();
+      const armUpperL = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.5, 14), armUpperLMat);
+      armUpperL.position.set(0, -0.25, 0);
+      const forearmLMat = bodyMaterial({ color: SKIN });
+      const forearmL = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.46, 14), forearmLMat);
+      forearmL.position.set(0, -0.73, 0);
+      const handLMat = bodyMaterial({ color: SKIN });
+      const handL = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), handLMat);
+      handL.position.set(0, -1.04, 0);
+      const armLGroup = new THREE.Group();
+      armLGroup.position.set(-0.55, 0.98, 0);
+      armLGroup.add(armUpperL, forearmL, handL);
+
+      // 右臂
+      const armUpperRMat = shirtMaterial();
+      const armUpperR = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.5, 14), armUpperRMat);
+      armUpperR.position.set(0, -0.25, 0);
+      const forearmRMat = bodyMaterial({ color: SKIN });
+      const forearmR = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.46, 14), forearmRMat);
+      forearmR.position.set(0, -0.73, 0);
+      const handRMat = bodyMaterial({ color: SKIN });
+      const handR = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), handRMat);
+      handR.position.set(0, -1.04, 0);
+      const armRGroup = new THREE.Group();
+      armRGroup.position.set(0.55, 0.98, 0);
+      armRGroup.add(armUpperR, forearmR, handR);
+
+      // 左腿：裤腿 + 鞋
+      const thighLMat = bodyMaterial({ color: PANTS });
+      const thighL = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.13, 0.55, 14), thighLMat);
+      thighL.position.set(0, -0.275, 0);
+      const calfLMat = bodyMaterial({ color: PANTS });
+      const calfL = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.55, 14), calfLMat);
+      calfL.position.set(0, -0.825, 0);
+      const shoeLMat = bodyMaterial({ color: SHOE });
+      const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.13, 0.42), shoeLMat);
+      shoeL.position.set(0, -1.16, 0.06);
+      const legLGroup = new THREE.Group();
+      legLGroup.position.set(-0.28, -0.55, 0);
+      legLGroup.add(thighL, calfL, shoeL);
+
+      // 右腿
+      const thighRMat = bodyMaterial({ color: PANTS });
+      const thighR = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.13, 0.55, 14), thighRMat);
+      thighR.position.set(0, -0.275, 0);
+      const calfRMat = bodyMaterial({ color: PANTS });
+      const calfR = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.55, 14), calfRMat);
+      calfR.position.set(0, -0.825, 0);
+      const shoeRMat = bodyMaterial({ color: SHOE });
+      const shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.13, 0.42), shoeRMat);
+      shoeR.position.set(0, -1.16, 0.06);
+      const legRGroup = new THREE.Group();
+      legRGroup.position.set(0.28, -0.55, 0);
+      legRGroup.add(thighR, calfR, shoeR);
+
+      spinGroup.add(headGroup, neck, torso, armLGroup, armRGroup, legLGroup, legRGroup);
+      spinGroup.updateMatrixWorld(true);
+      colorizeGradient(THREE, [torso, armUpperL, armUpperR], "#14b8a6", "#0369a1");
+
+      // 可拉伸部位
+      const parts = [
+        { object: headGroup, meshes: [head], axis: "uniform", materials: [headMat] },
+        { object: torso, meshes: [torso], axis: "y", materials: [torsoMat] },
+        { object: armLGroup, meshes: [armUpperL, forearmL, handL], axis: "y", materials: [armUpperLMat, forearmLMat, handLMat] },
+        { object: armRGroup, meshes: [armUpperR, forearmR, handR], axis: "y", materials: [armUpperRMat, forearmRMat, handRMat] },
+        { object: legLGroup, meshes: [thighL, calfL, shoeL], axis: "y", materials: [thighLMat, calfLMat, shoeLMat] },
+        { object: legRGroup, meshes: [thighR, calfR, shoeR], axis: "y", materials: [thighRMat, calfRMat, shoeRMat] }
+      ];
+
+      const pickMeshes = [];
+      parts.forEach((p) => {
+        p.meshes.forEach((m) => {
+          m.userData.part = p;
+          pickMeshes.push(m);
+        });
+      });
+
+      const raycaster = new THREE.Raycaster();
+      const ndc = new THREE.Vector2();
+
+      function pickPart(e) {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return null;
+        ndc.set(
+          ((e.clientX - rect.left) / rect.width) * 2 - 1,
+          -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        raycaster.setFromCamera(ndc, camera);
+        const hits = raycaster.intersectObjects(pickMeshes, false);
+        return hits.length ? hits[0].object.userData.part : null;
+      }
+
+      let mode = "idle";
+      let hoveredPart = null;
+      let stretchPart = null;
+      let startClientX = 0;
+      let startClientY = 0;
+      const startScale = new THREE.Vector3();
+
+      let rotY = 0;
+      let rotX = 0;
+      let dragY = 0;
+      let dragX = 0;
+      let velY = 0;
+      let velX = 0;
+      let autoY = 0;
+      let lastX = 0;
+      let lastY = 0;
+      let lastMoveTime = 0;
+      let parallaxX = 0;
+      let parallaxY = 0;
+      let parallaxTargetX = 0;
+      let parallaxTargetY = 0;
+
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const autoSpeed = reducedMotion ? 0 : 0.3;
+      const floatAmp = reducedMotion ? 0 : 0.16;
+      const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+      const baseBrowY = 0.2;
+      const expr = {
+        brow: 0,
+        browTarget: 0,
+        eye: 1,
+        eyeTarget: 1,
+        smile: 1,
+        smileTarget: 1,
+        o: 0,
+        oTarget: 0
+      };
+      let blinkPhase = 0;
+      let blinkTimer = 2.0;
+
+      function setExpression(name) {
+        if (name === "surprise") {
+          expr.browTarget = 0.09;
+          expr.eyeTarget = 1.25;
+          expr.smileTarget = 0;
+          expr.oTarget = 1;
+        } else {
+          expr.browTarget = 0;
+          expr.eyeTarget = 1;
+          expr.smileTarget = 1;
+          expr.oTarget = 0;
+        }
+      }
+
+      function setHover(part) {
+        if (hoveredPart === part) return;
+        if (hoveredPart) {
+          hoveredPart.materials.forEach((m) => {
+            m.emissive.setHex(0x000000);
+            m.emissiveIntensity = 1;
+          });
+        }
+        hoveredPart = part;
+        if (hoveredPart) {
+          hoveredPart.materials.forEach((m) => {
+            m.emissive.set(0x0d9488);
+            m.emissiveIntensity = 0.4;
+          });
+          canvas.style.cursor = "pointer";
+        } else {
+          canvas.style.cursor = "grab";
+        }
+      }
+
+      canvas.addEventListener("pointerdown", (e) => {
+        const part = pickPart(e);
+        try {
+          canvas.setPointerCapture(e.pointerId);
+        } catch (err) {}
+        canvas.classList.add("dragging");
+
+        if (part) {
+          mode = "stretch";
+          stretchPart = part;
+          startClientX = e.clientX;
+          startClientY = e.clientY;
+          startScale.copy(part.object.scale);
+          setHover(part);
+          setExpression("surprise");
+        } else {
+          mode = "rotate";
+          lastX = e.clientX;
+          lastY = e.clientY;
+          lastMoveTime = performance.now();
+          dragY = rotY;
+          dragX = rotX;
+          velY = 0;
+          velX = 0;
+          setHover(null);
+        }
+      });
+
+      canvas.addEventListener("pointermove", (e) => {
+        if (mode === "stretch" && stretchPart) {
+          const dy = startClientY - e.clientY;
+          const dx = e.clientX - startClientX;
+          if (stretchPart.axis === "uniform") {
+            const s = clamp(startScale.x + dy * 0.004, 0.7, 1.5);
+            stretchPart.object.scale.set(s, s, s);
+          } else {
+            const sy = clamp(startScale.y + dy * 0.005, 0.55, 1.8);
+            const sxz = clamp(startScale.x + dx * 0.0035, 0.65, 1.35);
+            stretchPart.object.scale.set(sxz, sy, sxz);
+          }
+          return;
+        }
+
+        if (mode === "rotate") {
+          const now = performance.now();
+          const dtMove = Math.max(8, now - lastMoveTime) / 1000;
+          const dY = e.clientX - lastX;
+          const dX = e.clientY - lastY;
+          lastX = e.clientX;
+          lastY = e.clientY;
+          lastMoveTime = now;
+          const rotDeltaY = dY * 0.0085;
+          const rotDeltaX = -dX * 0.0065;
+          velY = rotDeltaY / dtMove;
+          velX = rotDeltaX / dtMove;
+          dragY += rotDeltaY;
+          dragX = clamp(dragX + rotDeltaX, -0.7, 0.7);
+          return;
+        }
+
+        setHover(pickPart(e));
+      });
+
+      function endDrag(e) {
+        if (canvas.hasPointerCapture && canvas.hasPointerCapture(e.pointerId)) {
+          canvas.releasePointerCapture(e.pointerId);
+        }
+        canvas.classList.remove("dragging");
+        if (mode === "rotate") autoY = rotY;
+        if (mode === "stretch") setExpression("idle");
+        mode = "idle";
+        setHover(null);
+      }
+
+      canvas.addEventListener("pointerup", endDrag);
+      canvas.addEventListener("pointercancel", endDrag);
+
+      window.addEventListener("pointermove", (e) => {
+        if (mode !== "idle") return;
+        const nx = (e.clientX / window.innerWidth) * 2 - 1;
+        const ny = (e.clientY / window.innerHeight) * 2 - 1;
+        parallaxTargetY = nx * 0.18;
+        parallaxTargetX = -ny * 0.1;
+      });
+
+      document.documentElement.addEventListener("mouseleave", () => {
+        parallaxTargetX = 0;
+        parallaxTargetY = 0;
+      });
+
+      let rendering = false;
+      let inView = false;
+      let rafId = 0;
+      let lastTime = performance.now();
+      let elapsed = 0;
+
+      function startRender() {
+        if (rendering) return;
+        rendering = true;
+        lastTime = performance.now();
+        rafId = requestAnimationFrame(loop);
+      }
+
+      function stopRender() {
+        rendering = false;
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+
+      function syncVisibility() {
+        if (inView && !document.hidden) startRender();
+        else stopRender();
+      }
+
+      if ("IntersectionObserver" in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            inView = entries[0].isIntersecting;
+            syncVisibility();
+          },
+          { threshold: 0 }
+        );
+        io.observe(figure);
+      } else {
+        inView = true;
+      }
+
+      document.addEventListener("visibilitychange", syncVisibility);
+
+      function resize() {
+        const w = figure.clientWidth || canvas.clientWidth || 1;
+        const h = figure.clientHeight || canvas.clientHeight || 1;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+
+      window.addEventListener("resize", resize);
+      resize();
+      syncVisibility();
+
+      function loop(now) {
+        if (!rendering) return;
+        const dt = Math.min((now - lastTime) / 1000, 0.05);
+        lastTime = now;
+        elapsed += dt;
+
+        if (mode === "rotate") {
+          const k = 1 - Math.exp(-16 * dt);
+          rotY += (dragY - rotY) * k;
+          rotX += (dragX - rotX) * k;
+        } else {
+          const decay = Math.exp(-4.2 * dt);
+          velY *= decay;
+          velX *= decay;
+          rotY += velY * dt;
+          rotX += velX * dt;
+          autoY += autoSpeed * dt;
+          rotY += (autoY - rotY) * (1 - Math.exp(-2.0 * dt));
+          rotX += (0 - rotX) * (1 - Math.exp(-3.2 * dt));
+          rotX = clamp(rotX, -0.7, 0.7);
+        }
+
+        if (mode !== "stretch" && stretchPart) {
+          const k = 1 - Math.exp(-7 * dt);
+          const sc = stretchPart.object.scale;
+          sc.x += (1 - sc.x) * k;
+          sc.y += (1 - sc.y) * k;
+          sc.z += (1 - sc.z) * k;
+          if (Math.abs(sc.x - 1) < 0.003 && Math.abs(sc.y - 1) < 0.003 && Math.abs(sc.z - 1) < 0.003) {
+            sc.set(1, 1, 1);
+            stretchPart = null;
+          }
+        }
+
+        const pK = 1 - Math.exp(-4.0 * dt);
+        parallaxX += (parallaxTargetX - parallaxX) * pK;
+        parallaxY += (parallaxTargetY - parallaxY) * pK;
+
+        const eK = 1 - Math.exp(-8 * dt);
+        expr.brow += (expr.browTarget - expr.brow) * eK;
+        expr.eye += (expr.eyeTarget - expr.eye) * eK;
+        expr.smile += (expr.smileTarget - expr.smile) * eK;
+        expr.o += (expr.oTarget - expr.o) * eK;
+
+        browL.position.y = baseBrowY + expr.brow;
+        browR.position.y = baseBrowY + expr.brow;
+        const blinkScale = blinkPhase > 0 ? 0.08 : 1;
+        eyeL.scale.y = expr.eye * blinkScale;
+        eyeR.scale.y = expr.eye * blinkScale;
+        smile.scale.setScalar(expr.smile);
+        smile.visible = expr.smile > 0.05;
+        oMouth.scale.setScalar(expr.o);
+        oMouth.visible = expr.o > 0.05;
+
+        blinkTimer -= dt;
+        if (blinkTimer <= 0) {
+          blinkPhase = 0.14;
+          blinkTimer = 2.2 + Math.random() * 1.6;
+        }
+        if (blinkPhase > 0) blinkPhase -= dt;
+
+        spinGroup.rotation.y = rotY;
+        spinGroup.rotation.x = rotX;
+        tiltGroup.rotation.x = parallaxX;
+        tiltGroup.rotation.y = parallaxY;
+        floatGroup.position.y = Math.sin(elapsed * 1.35) * floatAmp;
+
+        renderer.render(scene, camera);
+        rafId = requestAnimationFrame(loop);
+      }
+    }
+
+    function colorizeGradient(THREE, meshes, topColor, bottomColor) {
+      const box = new THREE.Box3();
+      meshes.forEach((m) => box.expandByObject(m));
+      const minY = box.min.y;
+      const maxY = box.max.y;
+      const span = maxY - minY || 1;
+      const cTop = new THREE.Color(topColor);
+      const cBottom = new THREE.Color(bottomColor);
+      const c = new THREE.Color();
+      const v = new THREE.Vector3();
+
+      meshes.forEach((m) => {
+        const geo = m.geometry;
+        const pos = geo.attributes.position;
+        const colors = new Float32Array(pos.count * 3);
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos, i);
+          m.localToWorld(v);
+          const t = (v.y - minY) / span;
+          c.copy(cTop).lerp(cBottom, t);
+          colors[i * 3] = c.r;
+          colors[i * 3 + 1] = c.g;
+          colors[i * 3 + 2] = c.b;
+        }
+        geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      });
+    }
   </script>
 </body>
 </html>
